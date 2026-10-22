@@ -53,6 +53,42 @@ The `zip` Gulp task packages the theme files into `dist/<theme-name>.zip`, which
 pnpm zip
 ```
 
+# Local development with Ghost
+
+A local Ghost install lives outside this repository (`~/ghost-local` by default) and serves the theme straight from your working tree through a symlink, so there is no zip to rebuild. It needs macOS or Linux, Node 22 (see `.nvmrc`, Ghost itself requires 22.23.1 or later) and pnpm.
+
+```bash
+pnpm install
+pnpm ghost:install   # once: installs the latest Ghost in development mode and links this theme
+pnpm dev             # keep running: rebuilds assets/built/ on change
+```
+
+Open http://localhost:2368/ghost/, create the owner account, then activate the `michelin-dev` theme (Design & branding → Change theme). Template and asset changes show up on page reload. Run `pnpm ghost:restart` after editing the theme `config` in `package.json`.
+
+Other commands: `pnpm ghost:start`, `ghost:stop`, `ghost:restart`, `ghost:logs` and `ghost:link` (re-creates the symlink). `GHOST_DIR`, `GHOST_PORT` and `GHOST_VERSION` override the defaults.
+
+# Staging previews
+
+Pull requests can be previewed on a shared Ghost staging site, one at a time:
+
+1. Open a pull request from a branch of this repository (forks are never deployed).
+2. Add the `staging` label. The Staging workflow runs `pnpm test:ci`, then uploads the theme to staging. The staging URL is shown in the workflow run summary and on the pull request ("View deployment").
+3. Remove the label or close the pull request when you are done: `main` is redeployed.
+
+If another open pull request already carries the label, the deploy fails and names it.
+
+One-time setup:
+
+1. Create a Ghost site dedicated to staging, separate from production. Enabling private mode on it keeps previews behind a password.
+2. In its admin, Settings → Advanced → Integrations → Add custom integration, and copy the Admin API key.
+3. In GitHub, Settings → Environments → New environment named `staging`, with:
+   - the secret `GHOST_STAGING_ADMIN_API_KEY`
+   - the variable `GHOST_STAGING_URL`, e.g. `https://staging.example.com`
+   - the variable `GHOST_STAGING_ADMIN_URL`, only if the admin lives on another domain
+   - optionally, required reviewers to approve each deploy
+4. Create the `staging` label.
+5. After the first deploy, activate the `michelin` theme once in the staging admin. Later uploads replace it and keep it active.
+
 # Publishing a release
 
 Releases are shipped in two steps. First bump the version — this updates `package.json` and creates the matching commit and `v<version>` git tag:

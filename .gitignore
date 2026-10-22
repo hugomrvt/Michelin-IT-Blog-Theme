@@ -27,3 +27,7 @@ config.json
 changelog.md
 changelog.md.bk
 assets/built/
+
+# Local secrets (never commit Ghost API keys)
+.env
+.env.*
