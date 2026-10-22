@@ -22,10 +22,16 @@ Local Ghost, installed outside the repo in `~/ghost-local` (override with `GHOST
 
 `.github/workflows/staging.yml` deploys one pull request at a time to the shared staging site. A PR from a branch of this repo is deployed when it carries the `staging` label. A second labeled PR makes the deploy fail. Removing the label or closing the PR redeploys `main`. The staging URL is in the workflow run summary. Setup steps are in the README.
 
+The staging site is a second Ghost on the maintainer's Mac (`~/ghost-staging`, port 2369), published with Tailscale Funnel:
+
+- `pnpm staging:install`, `staging:start`, `staging:stop`, `staging:restart`, `staging:logs`
+- `pnpm staging:tunnel` / `staging:tunnel-off`: publish or unpublish it, `pnpm staging:url` prints the address
+- It never links the working tree. Themes only reach it through the workflow's upload.
+
 ## Rules
 
 - Never touch production. No production URL, key or deploy step belongs in this repo.
 - The Ghost Admin API key only lives in the `staging` GitHub environment.
 - Never commit secrets, `.env` files, Ghost databases, content exports, `assets/built/` or `dist/`.
 - Keep dev-only files out of the theme zip (`zipper` in `gulpfile.js`).
-- Ask before pushing a branch, opening a PR, adding the `staging` label or provisioning a paid service. Never enable auto-merge.
+- Ask before pushing a branch, opening a PR, adding the `staging` label, publishing the tunnel or provisioning a paid service. Never enable auto-merge.

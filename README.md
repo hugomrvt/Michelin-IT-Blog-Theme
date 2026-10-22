@@ -77,17 +77,29 @@ Pull requests can be previewed on a shared Ghost staging site, one at a time:
 
 If another open pull request already carries the label, the deploy fails and names it.
 
-One-time setup:
+## Hosting staging on a Mac
 
-1. Create a Ghost site dedicated to staging, separate from production. Enabling private mode on it keeps previews behind a password.
-2. In its admin, Settings → Advanced → Integrations → Add custom integration, and copy the Admin API key.
-3. In GitHub, Settings → Environments → New environment named `staging`, with:
+Staging runs as a second Ghost instance on a Mac, separate from the development one, and is published over HTTPS with [Tailscale Funnel](https://tailscale.com/docs/features/tailscale-funnel) at `https://<machine>.<tailnet>.ts.net`, where GitHub's runners and reviewers can reach it. Themes only reach it through the workflow's upload, never through a symlink.
+
+1. Install Tailscale on the Mac and sign in. In the Tailscale admin console, enable MagicDNS and HTTPS certificates, and allow Funnel for your account. The first `tailscale funnel` run prints a link if Funnel is not allowed yet.
+2. `pnpm staging:install` installs the latest Ghost in `~/ghost-staging` on port 2369, configured with the tailnet URL.
+3. `pnpm staging:tunnel` publishes it. `pnpm staging:url` prints the address.
+4. Open `<url>/ghost/`, create the owner account and turn on private mode, so previews stay behind a password.
+
+Staging is only reachable while the Mac is awake, Ghost is running and the tunnel is on. Otherwise the deploy fails with a connection error. Ghost does not restart by itself after a reboot, so run `pnpm staging:start`. `pnpm staging:tunnel-off` unpublishes the site, and `staging:stop`, `staging:restart` and `staging:logs` work like their `ghost:` counterparts. The instance runs Ghost in development mode with SQLite: it is fine for previews, not for confidential content.
+
+Any other Ghost reachable over HTTPS works as well. In that case skip the steps above and use its URL.
+
+## Connecting GitHub
+
+1. In the staging admin, Settings → Advanced → Integrations → Add custom integration, and copy the Admin API key.
+2. In GitHub, Settings → Environments → New environment named `staging`, with:
    - the secret `GHOST_STAGING_ADMIN_API_KEY`
-   - the variable `GHOST_STAGING_URL`, e.g. `https://staging.example.com`
+   - the variable `GHOST_STAGING_URL`, the output of `pnpm staging:url`
    - the variable `GHOST_STAGING_ADMIN_URL`, only if the admin lives on another domain
    - optionally, required reviewers to approve each deploy
-4. Create the `staging` label.
-5. After the first deploy, activate the `michelin` theme once in the staging admin. Later uploads replace it and keep it active.
+3. Create the `staging` label.
+4. After the first deploy, activate the `michelin` theme once in the staging admin. Later uploads replace it and keep it active.
 
 # Publishing a release
 

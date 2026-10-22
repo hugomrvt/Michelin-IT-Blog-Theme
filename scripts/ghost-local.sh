@@ -10,11 +10,15 @@
 #   GHOST_DIR        Ghost install directory      (default: ~/ghost-local)
 #   GHOST_PORT       Port Ghost listens on         (default: 2368)
 #   GHOST_VERSION    Ghost version to install      (default: latest)
+#   GHOST_URL        Public URL configured in Ghost (default: http://localhost:$GHOST_PORT)
+#   GHOST_LINK_THEME 0 to skip linking the working tree (default: 1)
 #   THEME_LINK_NAME  Theme folder name inside Ghost (default: michelin-dev)
 #
 # The theme is linked as "michelin-dev" rather than "michelin" so that
 # uploading a michelin.zip through the local admin can never land on the
 # symlink and overwrite this working tree.
+#
+# scripts/ghost-staging.sh reuses this script for the staging instance.
 
 set -euo pipefail
 
@@ -22,6 +26,10 @@ GHOST_CLI_VERSION="1.34.0"
 GHOST_DIR="${GHOST_DIR:-$HOME/ghost-local}"
 GHOST_PORT="${GHOST_PORT:-2368}"
 GHOST_VERSION="${GHOST_VERSION:-}"
+GHOST_URL="${GHOST_URL:-http://localhost:$GHOST_PORT}"
+GHOST_LINK_THEME="${GHOST_LINK_THEME:-1}"
+GHOST_PNAME="${GHOST_PNAME:-ghost-local}"
+GHOST_INSTALL_CMD="${GHOST_INSTALL_CMD:-pnpm ghost:install}"
 THEME_LINK_NAME="${THEME_LINK_NAME:-michelin-dev}"
 THEME_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 
@@ -35,7 +43,7 @@ die() {
 }
 
 require_install() {
-    [ -f "$GHOST_DIR/.ghost-cli" ] || die "no Ghost install in $GHOST_DIR. Run 'pnpm ghost:install' first."
+    [ -f "$GHOST_DIR/.ghost-cli" ] || die "no Ghost install in $GHOST_DIR. Run '$GHOST_INSTALL_CMD' first."
 }
 
 case "$GHOST_DIR/" in
@@ -65,8 +73,13 @@ cmd_install() {
     mkdir -p "$GHOST_DIR"
 
     ghost install ${GHOST_VERSION:+"$GHOST_VERSION"} --local \
-        --port "$GHOST_PORT" --url "http://localhost:$GHOST_PORT" \
+        --port "$GHOST_PORT" --url "$GHOST_URL" --pname "$GHOST_PNAME" \
         --no-start --no-prompt
+
+    if [ "$GHOST_LINK_THEME" = 0 ]; then
+        ghost start
+        return
+    fi
 
     link_theme
     ghost start
