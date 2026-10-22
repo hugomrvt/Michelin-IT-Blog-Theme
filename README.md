@@ -53,6 +53,54 @@ The `zip` Gulp task packages the theme files into `dist/<theme-name>.zip`, which
 pnpm zip
 ```
 
+# Local development with Ghost
+
+A local Ghost install lives outside this repository (`~/ghost-local` by default) and serves the theme straight from your working tree through a symlink, so there is no zip to rebuild. It needs macOS or Linux, Node 22 (see `.nvmrc`, Ghost itself requires 22.23.1 or later) and pnpm.
+
+```bash
+pnpm install
+pnpm ghost:install   # once: installs the latest Ghost in development mode and links this theme
+pnpm dev             # keep running: rebuilds assets/built/ on change
+```
+
+Open http://localhost:2368/ghost/, create the owner account, then activate the `michelin-dev` theme (Design & branding → Change theme). Template and asset changes show up on page reload. Run `pnpm ghost:restart` after editing the theme `config` in `package.json`.
+
+Other commands: `pnpm ghost:start`, `ghost:stop`, `ghost:restart`, `ghost:logs` and `ghost:link` (re-creates the symlink). `GHOST_DIR`, `GHOST_PORT` and `GHOST_VERSION` override the defaults.
+
+# Staging previews
+
+Pull requests can be previewed on a shared Ghost staging site, one at a time:
+
+1. Open a pull request from a branch of this repository (forks are never deployed).
+2. Add the `staging` label. The Staging workflow runs `pnpm test:ci`, then uploads the theme to staging. The staging URL is shown in the workflow run summary and on the pull request ("View deployment").
+3. Remove the label or close the pull request when you are done: `main` is redeployed.
+
+If another open pull request already carries the label, the deploy fails and names it.
+
+## Hosting staging on a Mac
+
+Staging runs as a second Ghost instance on a Mac, separate from the development one, and is published over HTTPS with [Tailscale Funnel](https://tailscale.com/docs/features/tailscale-funnel) at `https://<machine>.<tailnet>.ts.net`, where GitHub's runners and reviewers can reach it. Themes only reach it through the workflow's upload, never through a symlink.
+
+1. Install Tailscale on the Mac and sign in. In the Tailscale admin console, enable MagicDNS and HTTPS certificates, and allow Funnel for your account. The first `tailscale funnel` run prints a link if Funnel is not allowed yet.
+2. `pnpm staging:install` installs the latest Ghost in `~/ghost-staging` on port 2369, configured with the tailnet URL.
+3. `pnpm staging:tunnel` publishes it. `pnpm staging:url` prints the address.
+4. Open `<url>/ghost/`, create the owner account and turn on private mode, so previews stay behind a password.
+
+Staging is only reachable while the Mac is awake, Ghost is running and the tunnel is on. Otherwise the deploy fails with a connection error. Ghost does not restart by itself after a reboot, so run `pnpm staging:start`. `pnpm staging:tunnel-off` unpublishes the site, and `staging:stop`, `staging:restart` and `staging:logs` work like their `ghost:` counterparts. The instance runs Ghost in development mode with SQLite: it is fine for previews, not for confidential content.
+
+Any other Ghost reachable over HTTPS works as well. In that case skip the steps above and use its URL.
+
+## Connecting GitHub
+
+1. In the staging admin, Settings → Advanced → Integrations → Add custom integration, and copy the Admin API key.
+2. In GitHub, Settings → Environments → New environment named `staging`, with:
+   - the secret `GHOST_STAGING_ADMIN_API_KEY`
+   - the variable `GHOST_STAGING_URL`, the output of `pnpm staging:url`
+   - the variable `GHOST_STAGING_ADMIN_URL`, only if the admin lives on another domain
+   - optionally, required reviewers to approve each deploy
+3. Create the `staging` label.
+4. After the first deploy, activate the `michelin` theme once in the staging admin. Later uploads replace it and keep it active.
+
 # Publishing a release
 
 Releases are shipped in two steps. First bump the version — this updates `package.json` and creates the matching commit and `v<version>` git tag:
